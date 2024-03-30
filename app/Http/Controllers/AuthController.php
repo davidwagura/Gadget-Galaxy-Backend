@@ -6,11 +6,13 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
+use function Laravel\Prompts\password;
+
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $userData = $request->validate
+        $request->validate
         ([
             'username' => 'required|string',
             'email' => 'requireda|email|unique:users|string',
@@ -19,12 +21,38 @@ class AuthController extends Controller
 
         User::create
         ([
-            'name' => $userData['name'],
-            'email' => $userData['email'],
-            'password' => Hash::make($userData['password']),
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
         ]);
         return response()->json([
             'message' => 'Registered successfully',
         ],200);
+    }
+
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if(!empty($user)) {
+            if(Hash::check($request->password, $user->password)){
+                $token = $user->createToken("myToken")->plainTextToken;
+                
+                return response()->json([
+                    'status' => true,
+                    'message' => 'login successful',
+                    'token' => $token
+                ]);
+            }
+            return response()->json([
+                'status' => false,
+                'message' => "password didn't match"
+            ]);
+        }
     }
 }
